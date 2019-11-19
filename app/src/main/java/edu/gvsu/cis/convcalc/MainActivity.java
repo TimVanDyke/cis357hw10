@@ -13,7 +13,19 @@ package edu.gvsu.cis.convcalc;
         import android.widget.TextView;
         import android.util.Log;
 
+        import com.google.firebase.database.ChildEventListener;
+        import com.google.firebase.database.DataSnapshot;
+        import com.google.firebase.database.DatabaseError;
+        import com.google.firebase.database.DatabaseReference;
+        import com.google.firebase.database.FirebaseDatabase;
+
+        import org.joda.time.format.DateTimeFormatter;
+
         import org.joda.time.DateTime;
+        import org.joda.time.format.ISODateTimeFormat;
+
+        import java.util.ArrayList;
+        import java.util.List;
 
         import edu.gvsu.cis.convcalc.UnitsConverter.LengthUnits;
         import edu.gvsu.cis.convcalc.UnitsConverter.VolumeUnits;
@@ -38,7 +50,48 @@ public class MainActivity extends AppCompatActivity {
     private TextView fromUnits;
     private TextView title;
 
+    DatabaseReference topRef;
+    public static List<HistoryContent.HistoryItem> allHistory;
+
     HistoryContent.HistoryItem item;
+
+    private ChildEventListener chEvListener = new ChildEventListener() {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+            HistoryContent.HistoryItem entry =
+                    (HistoryContent.HistoryItem) dataSnapshot.getValue(HistoryContent.HistoryItem.class);
+            entry._key = dataSnapshot.getKey();
+            allHistory.add(entry);
+        }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+        }
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {
+            HistoryContent.HistoryItem entry =
+                    (HistoryContent.HistoryItem) dataSnapshot.getValue(HistoryContent.HistoryItem.class);
+            List<HistoryContent.HistoryItem> newHistory = new ArrayList<HistoryContent.HistoryItem>();
+            for (HistoryContent.HistoryItem t : allHistory) {
+                if (!t._key.equals(dataSnapshot.getKey())) {
+                    newHistory.add(t);
+                }
+            }
+            allHistory = newHistory;
+        }
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +109,8 @@ public class MainActivity extends AppCompatActivity {
         toUnits = findViewById(R.id.toUnits);
 
         title = findViewById(R.id.title);
+
+        allHistory = new ArrayList<HistoryContent.HistoryItem>();
 
         calcButton.setOnClickListener(v -> {
             doConversion();
@@ -100,7 +155,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-//
     }
 
     private void doConversion() {
@@ -118,39 +172,42 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (dest != null) {
-            switch(mode) {
-                case Length:
-                    LengthUnits tUnits, fUnits;
-                    if(dest == toField) {
-                        fUnits = LengthUnits.valueOf(fromUnits.getText().toString());
-                        tUnits = LengthUnits.valueOf(toUnits.getText().toString());
-                    } else {
-                        fUnits = LengthUnits.valueOf(toUnits.getText().toString());
-                        tUnits = LengthUnits.valueOf(fromUnits.getText().toString());
-                    }
-                    Double dVal = Double.parseDouble(val);
-                    Double cVal = UnitsConverter.convert(dVal, fUnits, tUnits);
-                    dest.setText(Double.toString(cVal));
-                    item = new HistoryContent.HistoryItem(dVal, cVal, mode.toString(),
-                            toUnits.getText().toString(), fromUnits.getText().toString(), DateTime.now().toLocalDate());
-                    HistoryContent.addItem(item);
-                    break;
-                case Volume:
-                    VolumeUnits vtUnits, vfUnits;
-                    if(dest == toField) {
-                        vfUnits = VolumeUnits.valueOf(fromUnits.getText().toString());
-                        vtUnits = VolumeUnits.valueOf(toUnits.getText().toString());
-                    } else {
-                        vfUnits = VolumeUnits.valueOf(toUnits.getText().toString());
-                        vtUnits = VolumeUnits.valueOf(fromUnits.getText().toString());
-                    }
-                    Double vdVal = Double.parseDouble(val);
-                    Double vcVal = UnitsConverter.convert(vdVal, vfUnits, vtUnits);
-                    dest.setText(Double.toString(vcVal));
-                    item = new HistoryContent.HistoryItem(vdVal, vcVal, mode.toString(),
-                            toUnits.getText().toString(), fromUnits.getText().toString(), DateTime.now().toLocalDate());
-                    HistoryContent.addItem(item);
-                    break;
+            if (mode == Mode.Length) {
+                LengthUnits tUnits, fUnits;
+                if(dest == toField) {
+                    fUnits = LengthUnits.valueOf(fromUnits.getText().toString());
+                    tUnits = LengthUnits.valueOf(toUnits.getText().toString());
+                } else {
+                    fUnits = LengthUnits.valueOf(toUnits.getText().toString());
+                    tUnits = LengthUnits.valueOf(fromUnits.getText().toString());
+                }
+                Double dVal = Double.parseDouble(val);
+                Double cVal = UnitsConverter.convert(dVal, fUnits, tUnits);
+                dest.setText(Double.toString(cVal));
+                DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
+                HistoryContent.HistoryItem item = new HistoryContent.HistoryItem(dVal, cVal, mode.toString(),
+                        fUnits.toString(), tUnits.toString(), fmt.print(DateTime.now()));
+//                HistoryContent.addItem(item);
+                topRef.push().setValue(item);
+            }
+            else if (mode == Mode.Volume) {
+                VolumeUnits vtUnits, vfUnits;
+                if(dest == toField) {
+                    vfUnits = VolumeUnits.valueOf(fromUnits.getText().toString());
+                    vtUnits = VolumeUnits.valueOf(toUnits.getText().toString());
+                } else {
+                    vfUnits = VolumeUnits.valueOf(toUnits.getText().toString());
+                    vtUnits = VolumeUnits.valueOf(fromUnits.getText().toString());
+                }
+                Double vdVal = Double.parseDouble(val);
+                Double vcVal = UnitsConverter.convert(vdVal, vfUnits, vtUnits);
+                dest.setText(Double.toString(vcVal));
+                DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
+                HistoryContent.HistoryItem item = new HistoryContent.HistoryItem(vdVal, vcVal, mode.toString(),
+                        vfUnits.toString(), vtUnits.toString(), fmt.print(DateTime.now()));
+//                HistoryContent.addItem(item);
+                topRef.push().setValue(item);
+
             }
         }
         hideKeyboard();
@@ -210,5 +267,19 @@ public class MainActivity extends AppCompatActivity {
             this.toUnits.setText(vals[4]);
             this.title.setText(mode.toString() + " Converter");
         }
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        allHistory.clear();
+        topRef = FirebaseDatabase.getInstance().getReference("history");
+        topRef.addChildEventListener (chEvListener);
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        topRef.removeEventListener(chEvListener);
     }
 }

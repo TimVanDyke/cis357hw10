@@ -2,6 +2,7 @@ package edu.gvsu.cis.convcalc;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,30 +21,33 @@ public class HistoryContent {
         ITEMS.add(item);
     }
 
-    static {
-        LocalDate now = DateTime.now().toLocalDate();
-        addItem(new HistoryItem(2.0, 1.829, "Length", "Yards", "Meters", now.minusDays(1)));
-        addItem(new HistoryItem(1.0, 3.785, "Volume", "Gallons", "Liters", now.minusDays(1)));
-        addItem(new HistoryItem(2.0, 1.829, "Length", "Yards", "Meters", now.plusDays(1)));
-        addItem(new HistoryItem(1.0, 3.785, "Volume", "Gallons", "Liters", now.plusDays(1)));
-    }
-
     public static class HistoryItem {
         public final Double fromVal;
         public final Double toVal;
         public final String mode;
         public final String fromUnits;
         public final String toUnits;
-        public final LocalDate timestamp;
+        public final String timestamp;
+        public String _key;
 
         public HistoryItem(Double fromVal, Double toVal, String mode,
-                           String fromUnits, String toUnits, LocalDate timestamp) {
+                           String fromUnits, String toUnits, String timestamp) {
             this.fromVal = fromVal;
             this.toVal = toVal;
             this.mode = mode;
             this.fromUnits = fromUnits;
             this.toUnits = toUnits;
             this.timestamp = timestamp;
+        }
+
+        public HistoryItem() {
+            this.fromVal = 12.34;
+            this.toVal = 56.78;
+            this.mode = "TestMode";
+            this.fromUnits = "TestToUnits";
+            this.toUnits = "TestFromUnits";
+            this.timestamp = "Today";
+            this._key = "SomeValidKey";
         }
 
         @Override
